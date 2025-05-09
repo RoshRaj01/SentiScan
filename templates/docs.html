@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>SentiScan - Documentation</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/docs.css') }}">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+	<div class="dashboard">
+		<div class="sidebar">
+			<img src="{{ url_for('static', filename='images/SentiScan-logo1.png') }}" alt="Logo" />
+			<h2>SentiScan</h2>
+			<button onclick="window.location.href='/home'">Dashboard</button>
+            <button onclick="window.location.href='/apis'">APIs</button>
+			<button onclick="window.location.href='/usage'">Check Usage</button>
+		</div>
+
+		<div class="main">
+			<div class="topbar">
+				<div onclick="location.reload();" class="fw-bold fs-5">Documentation</div>
+				<div class="user-menu">
+					<button onclick="toggleUserDropdown()" id="userBtn">Hi, {{ user['name'] }}</button>
+					<div id="userDropdown" class="dropdown-content">
+						<p><strong>Name:</strong> {{ user['name'] }}</p>
+						<p><strong>Email:</strong> {{ user['email'] }}</p>
+						<a href="#" onclick="logout()" class="logout-btn">Logout</a>
+					</div>
+				</div>
+			</div>
+
+			<div class="docs-container">
+
+				<div class="docs-section" id="intro">
+					<h2>📘 Introduction</h2>
+					<p>Welcome to the SentiScan API and platform documentation. Here you'll learn how to integrate our sentiment and emotion analysis tools into your app or workflow.</p>
+				</div>
+
+				<div class="docs-section" id="auth">
+					<h2>🔐 Authentication</h2>
+					<p>Each user is provided an <code>api_key</code> after registration. This key must be sent in requests to access the API securely.</p>
+					<p>Example usage:</p>
+					<pre><code>{ "api_key": "your-api-key-here", "text": "I'm happy today!" }</code></pre>
+				</div>
+
+				<div class="docs-section" id="usage">
+					<h2>🧠 API Usage</h2>
+					<p>Send a <code>POST</code> request to <code>/analyze</code> with your API key and input text.</p>
+					<p>The response will contain sentiment scores, keywords, emotion label, and more.</p>
+				</div>
+
+				<div class="docs-section" id="limits">
+					<h2>📊 Usage Limits</h2>
+					<p>Each user has a free tier limit of <code>20</code> analyses per day.</p>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+<script src="{{ url_for('static', filename='js/docs.js') }}"></script>
+</body>
+</html>

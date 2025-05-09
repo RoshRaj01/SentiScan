@@ -9,7 +9,8 @@ body {
 
 .dashboard {
     display: flex;
-    height: 100vh;
+    min-height: 100vh;
+    align-items: stretch;
 }
 
 .sidebar {
@@ -19,7 +20,15 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    flex-shrink: 0;
 }
+
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 
 .sidebar img {
     width: 170px;
@@ -52,12 +61,6 @@ body {
     align-items: center;
     padding: 0 30px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
 }
 
 .content {
@@ -103,7 +106,7 @@ body {
 
 .analyzed-text-box {
   background-color: white;
-  padding: 20px;
+  padding: 0px;
   border-radius: 10px;
   margin-bottom: 20px;
   display: flex;
@@ -139,3 +142,98 @@ body {
 .analyzed-text-box button:hover {
   background-color: #55a77d;
 }
+
+.user-menu {
+  position: relative;
+  display: inline-block;
+}
+
+#userDropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #fff;
+  min-width: 180px;
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
+  z-index: 1;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+#userDropdown p, #userDropdown a {
+  margin: 8px 0;
+  color: #333;
+  text-decoration: none;
+}
+
+.logout-btn {
+  color: red;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  padding: 6px 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.logout-btn:hover {
+  background-color: #ffe5e5;
+  box-shadow: 0 4px 10px rgba(255, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.analysis-results {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.result-box {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    flex: 1;
+    min-width: 250px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.result-box h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.result-box p {
+    font-size: 16px;
+    color: #555;
+}
+
+.styled-button {
+    background-color: #6ac197;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.styled-button:hover {
+    background-color: #55a77d;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3; /* Light grey */
+  border-top: 3px solid #6ac197; /* Your theme green color */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+

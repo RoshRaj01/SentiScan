@@ -1,0 +1,37 @@
+.docs-container {
+    padding: 30px;
+    overflow-y: auto;
+    height: calc(100vh - 60px);
+}
+
+.docs-section {
+    margin-bottom: 40px;
+}
+
+.docs-section h2 {
+    color: #6ac197;
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+.docs-section p {
+    color: #333;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+.docs-section code {
+    background: #f1f1f1;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 15px;
+}
+
+.docs-section pre {
+    background: #f4f4f4;
+    padding: 15px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 15px;
+}

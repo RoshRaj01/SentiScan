@@ -1,0 +1,64 @@
+.content {
+	padding: 30px;
+}
+
+.content h3 {
+	color: #6ac197;
+	margin-bottom: 20px;
+}
+
+#keyList {
+	list-style-type: none;
+	padding-left: 0;
+	margin-bottom: 20px;
+}
+
+#keyList li {
+	background: #f9f9f9;
+	border: 1px solid #ddd;
+	padding: 10px;
+	margin-bottom: 10px;
+	border-radius: 6px;
+	font-family: monospace;
+	font-size: 14px;
+}
+
+.styled-button {
+	background-color: #6ac197;
+	border: none;
+	color: white;
+	padding: 10px 20px;
+	border-radius: 8px;
+	font-weight: bold;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+}
+
+.styled-button:hover {
+	background-color: #55a77d;
+}
+
+.small-btn {
+	background-color: #6ac197;
+	border: none;
+	color: white;
+	padding: 5px 10px;
+	border-radius: 5px;
+	font-size: 12px;
+	margin-left: 10px;
+	cursor: pointer;
+	transition: background-color 0.3s;
+}
+
+.small-btn:hover {
+	background-color: #55a77d;
+}
+
+.delete-btn {
+	background-color: #ff4d4d;
+}
+
+.delete-btn:hover {
+	background-color: #e60000;
+}
+
