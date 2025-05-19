@@ -1,0 +1,38 @@
+[Sara • 9:00 AM]  
+Good morning, team. Are we on track with the new landing page copy?
+
+[Mike • 9:02 AM]  
+Morning, Sara. I’m finalizing the CTAs now and will send it over to Design by 10:00 AM.
+
+[Aisha • 9:03 AM]  
+Thanks, Mike. Once that’s in, I can set up the Google Analytics event tracking.
+
+[Rahul • 9:05 AM]  
+Quick heads-up: I spotted an issue with the mobile navigation on iOS—submenus aren’t accessible via swipe. Has anyone else encountered this?
+
+[Chen • 9:06 AM]  
+I tested on Android and it worked fine. Let me check on an iPhone simulator now.
+
+[Chen • 9:08 AM]  
+Confirmed. The touch event isn’t propagating correctly. I’ll prepare a hotfix and push it by lunchtime.
+
+[Sara • 9:10 AM]  
+Great. Can we schedule a brief QA session at 1:00 PM to verify the fix and confirm the social links?
+
+[Mike • 9:11 AM]  
+I’ll be there—and I’ll bring coffee.
+
+[Aisha • 9:12 AM]  
+I’ll handle analytics and SEO checks. If everything looks good, we’re clear for tomorrow’s deploy.
+
+[Rahul • 9:13 AM]  
+Also, the client requested a small tweak: please reduce the header logo size by 10%. They feel it’s a bit too large.
+
+[Chen • 9:15 AM]  
+No problem—I’ll include that in the hotfix branch as well.
+
+[Sara • 9:16 AM]  
+Perfect. Thanks, everyone. Let’s aim for a smooth rollout!
+
+[All • 9:17 AM]  
+👍🚀

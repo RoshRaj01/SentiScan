@@ -1,22 +1,33 @@
+let latestGeneratedKey = "";
+
 function generateKey() {
 	const selectedModel = document.getElementById('modelSelector').value;
 
 	fetch("/generate_new_key", {
 		method: "POST",
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ model: selectedModel }) // 🛠 send selected model
+		body: JSON.stringify({ model: selectedModel })
 	})
 	.then(res => res.json())
 	.then(data => {
 		if (data.api_key) {
-			const keyList = document.getElementById("keyList");
-			const newItem = document.createElement("li");
-			newItem.innerHTML = `
-                <code>${data.api_key}</code>
-                <button class="small-btn" onclick="copyKey('${data.api_key}', this)">📋 Copy</button>
-                <button class="small-btn delete-btn" onclick="deleteKey('${data.api_key}', this)">🗑️ Delete</button>
-            `;
-			keyList.appendChild(newItem);
+			latestGeneratedKey = data.api_key;
+			document.getElementById("newApiKeyDisplay").textContent = latestGeneratedKey;
+			new bootstrap.Modal(document.getElementById('projectModal')).show(); // Show modal
+
+			// Load projects
+			fetch("/get_projects")
+				.then(res => res.json())
+				.then(projects => {
+					const select = document.getElementById("projectDropdown");
+					select.innerHTML = "";
+					projects.forEach(p => {
+						const opt = document.createElement("option");
+						opt.value = p._id;
+						opt.textContent = p.name;
+						select.appendChild(opt);
+					});
+				});
 		}
 	})
 	.catch(err => {
@@ -24,6 +35,34 @@ function generateKey() {
 		alert("Could not generate new key.");
 	});
 }
+function assignProjectToApi() {
+	const mode = document.getElementById("assignMode").value;
+	if (!latestGeneratedKey) return alert("No key to assign.");
+
+	if (mode === "new") {
+		const name = document.getElementById("newProjName").value.trim();
+		if (!name) return alert("Enter a project name");
+
+		fetch("/create_project", {
+			method: "POST",
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name, api_key: latestGeneratedKey })
+		})
+		.then(() => location.reload());
+	} else {
+		const id = document.getElementById("projectDropdown").value;
+		if (!id) return alert("Pick a project");
+
+		fetch("/assign_project", {
+			method: "POST",
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ project_id: id, api_key: latestGeneratedKey })
+		})
+		.then(() => location.reload());
+	}
+}
+
+
 
 function copyKey(apiKey, btnElement) {
 	navigator.clipboard.writeText(apiKey)
@@ -56,8 +95,8 @@ function deleteKey(apiKey, btnElement) {
 	.then(res => res.json())
 	.then(data => {
 		if (data.success) {
-			const listItem = btnElement.parentElement;
-			listItem.remove();
+			const row = btnElement.closest(".api-row");
+			if (row) row.remove();
 			alert("✅ API key deleted successfully!");
 		} else {
 			alert("❌ Failed to delete API key.");
@@ -85,4 +124,80 @@ window.onclick = function(event) {
 function logout() {
     sessionStorage.removeItem('apiKey');
     window.location.href = "/logout";
+}
+
+function loadProjects() {
+	fetch("/get_projects")
+		.then(res => res.json())
+		.then(projects => {
+			const select = document.getElementById("projectDropdown");
+			select.innerHTML = "";
+			projects.forEach(p => {
+				const opt = document.createElement("option");
+				opt.value = p._id;
+				opt.textContent = p.name;
+				select.appendChild(opt);
+			});
+		})
+		.catch(err => console.error("Error loading projects:", err));
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+	document.getElementById("assignMode").addEventListener("change", e => {
+		const mode = e.target.value;
+		document.getElementById("newProjInput").style.display = mode === "new" ? "block" : "none";
+		document.getElementById("existingProjSelect").style.display = mode === "existing" ? "block" : "none";
+	});
+});
+
+function deleteProject(projectId, btnElement) {
+	if (!confirm("⚠️ This will delete the entire project. Continue?")) return;
+
+	fetch("/delete_project", {
+		method: "POST",
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ project_id: projectId })
+	})
+	.then(res => res.json())
+	.then(data => {
+		if (data.success) {
+			const block = btnElement.closest(".project-block");
+			if (block) block.remove();
+			alert("✅ Project deleted!");
+		} else {
+			alert("❌ Failed to delete project.");
+		}
+	})
+	.catch(err => {
+		console.error("Error:", err);
+		alert("❌ Something went wrong.");
+	});
+}
+
+function editProjectName(projectId) {
+	const nameSpan = document.querySelector(`.project-name[data-project-id="${projectId}"]`);
+	const currentName = nameSpan.textContent.trim();
+
+	const newName = prompt("📝 Enter new project name:", currentName);
+	if (!newName || newName === currentName) return;
+
+	fetch("/rename_project", {
+		method: "POST",
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ project_id: projectId, new_name: newName })
+	})
+	.then(res => res.json())
+	.then(data => {
+		if (data.success) {
+			nameSpan.textContent = newName;
+			alert("✅ Project renamed!");
+		} else {
+			alert("❌ Rename failed.");
+		}
+	})
+	.catch(err => {
+		console.error("Rename error:", err);
+		alert("❌ Something went wrong.");
+	});
 }

@@ -12,6 +12,9 @@ import json
 import re
 import uuid
 import smtplib
+import docx
+import PyPDF2
+from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -24,12 +27,12 @@ db = client['SentiScan']
 user_collection = db['user']
 analysis_collection = db['analysis']
 api_usage_collection = db['api_usage']
+project_collection = db['projects']
 
 
 # === HELPER FUNCTIONS ===
 def get_today():
     return date.today().isoformat()
-
 
 # === ROUTES ===
 @app.route('/')
@@ -150,10 +153,14 @@ def home():
 
 @app.route('/apis')
 def apis():
-    if 'user_id' in session:
-        user = user_collection.find_one({'_id': ObjectId(session['user_id'])})
-        return render_template('apis.html', user=user)
-    return redirect(url_for('login'))
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = user_collection.find_one({'_id': ObjectId(session['user_id'])})
+
+    projects = list(project_collection.find({"user_id": ObjectId(session['user_id'])}))
+
+    return render_template('apis.html', user=user, user_projects=projects)
 
 
 @app.route('/generate_new_key', methods=['POST'])
@@ -188,11 +195,15 @@ def verify_api_key():
     if not entered_key:
         return jsonify({"valid": False, "message": "No API key provided."}), 400
 
-    # Fetch only the current logged-in user
     user = user_collection.find_one({"_id": ObjectId(session['user_id'])})
 
     if user and entered_key in user.get('api_keys', []):
-        return jsonify({"valid": True, "message": "✅     API key is valid!"})
+        model_type = entered_key.split('-')[1]
+        return jsonify({
+            "valid": True,
+            "message": "✅ API key is valid!",
+            "model": model_type
+        })
     else:
         return jsonify({"valid": False, "message": "❌ Invalid API key."})
 
@@ -282,8 +293,10 @@ def analyze_text():
             return jsonify({'error': 'Unauthorized. Please login again.'}), 401
 
         data = request.get_json()
-        user_input = data.get('text')
         api_key = data.get('api_key')
+        user_input = data.get('text', '')
+        url_input = data.get('url', '')
+        uploaded_file = None
 
         if not user_input or not api_key:
             return jsonify({'error': 'Missing text or API key'}), 400
@@ -293,11 +306,60 @@ def analyze_text():
         if not user or api_key not in user.get('api_keys', []):
             return jsonify({'error': 'Invalid API Key'}), 401
 
+        model_type = api_key.split('-')[1]
+
+        if uploaded_file:
+            filename = uploaded_file.filename.lower()
+            if model_type == 'r1' and not filename.endswith('.txt'):
+                return jsonify({"error": "Model r1 only supports .txt files"}), 400
+            if model_type == 'r2' and not any(filename.endswith(ext) for ext in ['.txt', '.pdf']):
+                return jsonify({"error": "Model r2 only supports .txt and .pdf files"}), 400
+            if model_type == 'r3' and not any(filename.endswith(ext) for ext in ['.txt', '.pdf', '.docx']):
+                return jsonify({"error": "Model r3 supports .txt, .pdf, and .docx files"}), 400
+
+        if url_input and model_type != 'r3':
+            return jsonify({"error": "URL input is only supported for Model r3"}), 400
+
+        project = project_collection.find_one({
+            "user_id": ObjectId(session['user_id']),
+            "api_keys": api_key
+        })
+        project_name = project['name'] if project else None
+
         today = get_today()
         usage = api_usage_collection.find_one({'api_key': api_key, 'date': today})
 
         if usage and usage['count'] >= 20:
             return jsonify({'error': 'API key daily limit reached'}), 403
+
+        file_text = ""
+        if uploaded_file:
+            filename = uploaded_file.filename.lower()
+            if filename.endswith(".txt"):
+                file_text = uploaded_file.read().decode("utf-8")
+            elif filename.endswith(".pdf"):
+                from io import BytesIO
+                pdf_reader = PyPDF2.PdfReader(BytesIO(uploaded_file.read()))
+                file_text = "\n".join(page.extract_text() or "" for page in pdf_reader.pages)
+            elif filename.endswith(".docx"):
+                from io import BytesIO
+                doc = docx.Document(BytesIO(uploaded_file.read()))
+                file_text = "\n".join(p.text for p in doc.paragraphs)
+
+        # Scrape URL if given
+        url_text = ""
+        if url_input:
+            try:
+                res = requests.get(url_input, timeout=5)
+                soup = BeautifulSoup(res.text, 'html.parser')
+                texts = soup.find_all(text=True)
+                visible_texts = filter(lambda t: t.parent.name not in ['style', 'script', 'head', 'title', 'meta'],
+                                       texts)
+                url_text = " ".join(t.strip() for t in visible_texts if t.strip())
+            except Exception:
+                url_text = ""
+
+        combined_text = "\n".join([user_input, file_text, url_text])
 
         # Build the prompt
         prompt = f"""
@@ -317,20 +379,32 @@ def analyze_text():
         """
 
         try:
-            ollama_response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={"model": "llama3.2:1b", "prompt": prompt, "stream": False},
+            headers = {
+                "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+                "Content-Type": "application/json"
+            }
+            groq_payload = {
+                "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+                "messages": [
+                    {"role": "system", "content": "You are a professional sentiment and emotion analysis tool."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.5
+            }
+            groq_response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=groq_payload,
                 timeout=20
             )
-        except requests.exceptions.ConnectionError:
-            return jsonify({"error": "Ollama server is unavailable. Please try again later."}), 503
-        except requests.exceptions.Timeout:
-            return jsonify({"error": "Ollama server timeout. Please try again."}), 504
+        except requests.exceptions.RequestException as e:
+            print("Groq API call failed:", e)
+            return jsonify({"error": "Groq API failed"}), 500
 
-        if ollama_response.status_code != 200:
-            return jsonify({"error": "Ollama API failed"}), 500
+        if groq_response.status_code != 200:
+            return jsonify({"error": "Groq API failed"}), 500
 
-        raw_response = ollama_response.json().get("response", "")
+        raw_response = groq_response.json()["choices"][0]["message"]["content"]
 
         json_match = re.search(r'{.*}', raw_response, re.DOTALL)
         if not json_match:
@@ -341,6 +415,7 @@ def analyze_text():
         record = {
             "user": user.get('name', 'anonymous'),
             "api_key": api_key,
+            "project": project_name,
             "text": result.get("content", user_input),
             "sentiment_score": result.get("sentiment_score"),
             "key_words": result.get("key_words"),
@@ -379,10 +454,15 @@ def analyze():
         if not user_input or not api_key:
             return jsonify({'error': 'Missing text or API key'}), 400
 
-        # Find the user who owns this API key
         user = user_collection.find_one({'api_keys': api_key})
         if not user:
             return jsonify({'error': 'Invalid API Key'}), 401
+
+        project = project_collection.find_one({
+            "user_id": ObjectId(session['user_id']),
+            "api_keys": api_key
+        })
+        project_name = project['name'] if project else None
 
         today = get_today()
         usage = api_usage_collection.find_one({'api_key': api_key, 'date': today})
@@ -408,20 +488,32 @@ def analyze():
         """
 
         try:
-            ollama_response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={"model": "llama3.2:1b", "prompt": prompt, "stream": False},
+            headers = {
+                "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+                "Content-Type": "application/json"
+            }
+            groq_payload = {
+                "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+                "messages": [
+                    {"role": "system", "content": "You are a professional sentiment and emotion analysis tool."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.5
+            }
+            groq_response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=groq_payload,
                 timeout=20
             )
-        except requests.exceptions.ConnectionError:
-            return jsonify({"error": "Ollama server is unavailable. Please try again later."}), 503
-        except requests.exceptions.Timeout:
-            return jsonify({"error": "Ollama server timeout. Please try again."}), 504
+        except requests.exceptions.RequestException as e:
+            print("Groq API call failed:", e)
+            return jsonify({"error": "Groq API failed"}), 500
 
-        if ollama_response.status_code != 200:
-            return jsonify({"error": "Ollama API failed"}), 500
+        if groq_response.status_code != 200:
+            return jsonify({"error": "Groq API failed"}), 500
 
-        raw_response = ollama_response.json().get("response", "")
+        raw_response = groq_response.json()["choices"][0]["message"]["content"]
         json_match = re.search(r'{.*}', raw_response, re.DOTALL)
 
         if not json_match:
@@ -432,6 +524,7 @@ def analyze():
         record = {
             "user": user.get('name', 'anonymous'),
             "api_key": api_key,
+            "project": project_name,
             "text": result.get("content", user_input),
             "sentiment_score": result.get("sentiment_score"),
             "key_words": result.get("key_words"),
@@ -503,7 +596,106 @@ def admin():
                            emotions=emotions,
                            )
 
+@app.route('/create_project', methods=['POST'])
+def create_project():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
 
+    data = request.get_json()
+    name = data.get('name')
+    api_key = data.get('api_key')
+
+    if not name or not api_key:
+        return jsonify({"error": "Missing fields"}), 400
+
+    project = {
+        "user_id": ObjectId(session['user_id']),
+        "name": name,
+        "api_keys": [api_key]
+    }
+    project_collection.insert_one(project)
+
+    return jsonify({"message": "Project created and API key linked!"})
+
+@app.route('/rename_project', methods=['POST'])
+def rename_project():
+    if 'user_id' not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    project_id = data.get("project_id")
+    new_name = data.get("new_name")
+
+    if not project_id or not new_name:
+        return jsonify({"success": False, "error": "Missing data"}), 400
+
+    result = project_collection.update_one(
+        {"_id": ObjectId(project_id), "user_id": ObjectId(session['user_id'])},
+        {"$set": {"name": new_name}}
+    )
+
+    return jsonify({"success": result.modified_count == 1})
+
+@app.route('/assign_project', methods=['POST'])
+def assign_project():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    project_id = data.get('project_id')
+    api_key = data.get('api_key')
+
+    project = project_collection.find_one({
+        "_id": ObjectId(project_id),
+        "user_id": ObjectId(session['user_id'])
+    })
+
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    if api_key not in project["api_keys"]:
+        project_collection.update_one(
+            {"_id": ObjectId(project_id)},
+            {"$push": {"api_keys": api_key}}
+        )
+
+    return jsonify({"message": "API key added to project."})
+
+@app.route('/get_projects', methods=['GET'])
+def get_projects():
+    if 'user_id' not in session:
+        return jsonify([])
+
+    projects = list(project_collection.find(
+        {"user_id": ObjectId(session['user_id'])},
+        {"name": 1}
+    ))
+    for p in projects:
+        p["_id"] = str(p["_id"])
+    return jsonify(projects)
+
+@app.route('/delete_project', methods=['POST'])
+def delete_project():
+    if 'user_id' not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    project_id = data.get("project_id")
+
+    if not project_id:
+        return jsonify({"success": False, "error": "No project ID provided"}), 400
+
+    project = project_collection.find_one({
+        "_id": ObjectId(project_id),
+        "user_id": ObjectId(session['user_id'])
+    })
+
+    if not project:
+        return jsonify({"success": False, "error": "Project not found"}), 404
+
+    project_collection.delete_one({"_id": ObjectId(project_id)})
+
+    return jsonify({"success": True})
 
 
 if __name__ == '__main__':
