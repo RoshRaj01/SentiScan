@@ -223,6 +223,11 @@ def delete_api_key():
         {"_id": ObjectId(session['user_id'])},
         {"$pull": {"api_keys": api_key_to_delete}}
     )
+
+    project_collection.update_many(
+        {"user_id": ObjectId(session['user_id'])},
+        {"$pull": {"api_keys": api_key_to_delete}}
+    )
     return jsonify({"success": True, "message": "API key deleted successfully."})
 
 
@@ -263,7 +268,7 @@ def usage():
         analyses.append(data)
 
         emotion = data.get("emotion_analysis")
-        if emotion:
+        if isinstance(emotion, str) and emotion.strip():
             emotions[emotion] = emotions.get(emotion, 0) + 1
 
         polarity = data.get("sentiment_label")
@@ -292,13 +297,12 @@ def analyze_text():
         if 'user_id' not in session:
             return jsonify({'error': 'Unauthorized. Please login again.'}), 401
 
-        data = request.get_json()
-        api_key = data.get('api_key')
-        user_input = data.get('text', '')
-        url_input = data.get('url', '')
-        uploaded_file = None
+        api_key = request.form.get('api_key')
+        user_input = request.form.get('text', '')
+        url_input = request.form.get('url', '')
+        uploaded_file = request.files.get('file')
 
-        if not user_input or not api_key:
+        if not (user_input or uploaded_file) or not api_key:
             return jsonify({'error': 'Missing text or API key'}), 400
 
         user = user_collection.find_one({'_id': ObjectId(session['user_id'])})
@@ -375,7 +379,7 @@ def analyze_text():
             "emotion_analysis": (dominant emotion like Joy, Sadness, Anger, Fear, Disgust, Surprise, Anxiety, Happiness, Love, Jealousy, Shame, Calmness, Doubt, Embarrassment, Enjoyment, Anticipation, Contempt, Envy, Excitement, Pride, Awe, Depression, etc.)
         }}
 
-        Text: "{user_input}"
+        Text: "{combined_text}"
         """
 
         try:

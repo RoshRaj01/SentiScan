@@ -45,6 +45,46 @@ function verifyApiKey(showAlert = true) {
 	});
 }
 
+let uploadedFile = null;
+let currentModel = null;
+
+function handleFileAttach() {
+	const input = document.getElementById('fileInput');
+	const file = input.files[0];
+	const key = sessionStorage.getItem('apiKey');
+
+	if (!file || !key) return;
+
+	currentModel = key.split("-")[1];
+	const allowed = {
+		r1: ['txt'],
+		r2: ['txt', 'pdf'],
+		r3: ['txt', 'pdf', 'docx']
+	};
+
+	const ext = file.name.split('.').pop().toLowerCase();
+	if (!allowed[currentModel]?.includes(ext)) {
+		alert(`❌ ${currentModel.toUpperCase()} model does not support .${ext} files`);
+		input.value = "";
+		uploadedFile = null;
+		document.getElementById('fileNameDisplay').innerText = "";
+		document.getElementById('removeFileBtn').style.display = 'none';
+		return;
+	}
+
+	uploadedFile = file;
+	document.getElementById('fileNameDisplay').innerText = file.name;
+	document.getElementById('removeFileBtn').style.display = 'inline';
+}
+
+function removeUploadedFile() {
+	document.getElementById('fileInput').value = '';
+	uploadedFile = null;
+	document.getElementById('fileNameDisplay').innerText = '';
+	document.getElementById('removeFileBtn').style.display = 'none';
+}
+
+
 function analyzeText() {
 	if (!isApiKeyVerified) {
 		alert("❌ Please verify your API key first!");
@@ -59,38 +99,41 @@ function analyzeText() {
 	analyzeBtn.disabled = true;
 	spinner.style.display = "inline-block";
 
+	const formData = new FormData();
+	formData.append("text", inputText);
+	formData.append("api_key", apiKey);
+	if (uploadedFile) {
+		formData.append("file", uploadedFile);
+	}
+
 	fetch('/analyze', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			text: inputText,
-			api_key: apiKey
+		body: formData
+	})
+		.then(response => {
+			if (response.status === 403) {
+				alert("🚫 You've reached your usage limit of 20 analyses for today.");
+				return null;
+			}
+			if (!response.ok) {
+				throw new Error("An error occurred while analyzing text.");
+			}
+			return response.json();
 		})
-	})
-	.then(response => {
-		if (response.status === 403) {
-			alert("🚫 You've reached your usage limit of 20 analyses for today.");
-			return null;
-		}
-		if (!response.ok) {
-			throw new Error("An error occurred while analyzing text.");
-		}
-		return response.json();
-	})
-	.then(data => {
-		if (data) {
-			document.getElementById("emotionResult").innerText = data.predicted_emotion;
-			document.getElementById("polarityResult").innerText = data.predicted_polarity;
-		}
-	})
-	.catch(error => {
-		console.error('Error analyzing text:', error);
-		alert("Something went wrong while trying to analyze your input.");
-	})
-	.finally(() => {
-		spinner.style.display = "none";
-		analyzeBtn.disabled = false;
-	});
+		.then(data => {
+			if (data) {
+				document.getElementById("emotionResult").innerText = data.predicted_emotion;
+				document.getElementById("polarityResult").innerText = data.predicted_polarity;
+			}
+		})
+		.catch(error => {
+			console.error('Error analyzing text:', error);
+			alert("Something went wrong while trying to analyze your input.");
+		})
+		.finally(() => {
+			spinner.style.display = "none";
+			analyzeBtn.disabled = false;
+		});
 }
 
 function toggleUserDropdown() {

@@ -236,4 +236,19 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+#fileInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
 
+#removeFileBtn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}

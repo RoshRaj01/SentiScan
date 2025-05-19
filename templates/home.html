@@ -46,6 +46,23 @@
 			<div class="analyzed-text-box">
 				<label for="userInput">Enter Your Text:</label>
 				<textarea id="userInput" rows="4" placeholder="Content: e.g., I feel a little down lately. 😔"></textarea>
+				<div style="display: flex; align-items: center; margin-top: 10px;">
+				  <label for="fileInput" style="cursor: pointer; display: flex; align-items: center;">
+					📎 <span style="font-weight: bold; text-decoration: underline; margin-left: 5px;">Attach file</span>
+				  </label>
+
+				  <input type="file" id="fileInput" style="display: none;" onchange="handleFileAttach()">
+
+				  <div id="fileInfo" style="display: flex; align-items: center; margin-left: 10px;">
+					<span id="fileNameDisplay" style="font-size: 13px; color: #333;"></span>
+					<button id="removeFileBtn"
+					  onclick="removeUploadedFile()"
+					  style="display: none; background: none; border: none; color: #ff4d6d; font-size: 13px; cursor: pointer; padding-left: 5px;">
+					  ✘
+					</button>
+				  </div>
+				</div>
+
 				<div style="display: flex; align-items: center; gap: 10px;">
 				  <button id="analyzeBtn" onclick="analyzeText()" disabled>Analyse</button>
 				  <div id="loadingSpinner" class="spinner" style="display: none;"></div>
