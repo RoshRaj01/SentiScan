@@ -459,7 +459,6 @@ def analyze():
             return jsonify({'error': 'Invalid API Key'}), 401
 
         project = project_collection.find_one({
-            "user_id": ObjectId(session['user_id']),
             "api_keys": api_key
         })
         project_name = project['name'] if project else None
@@ -551,6 +550,87 @@ def analyze():
         traceback.print_exc()
         return jsonify({"error": "Server error occurred."}), 500
 
+@app.route('/project_analysis', methods=['POST'])
+def analyze_project():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    project_id = data.get("project_id")
+
+    if not project_id:
+        return jsonify({"error": "Missing project ID"}), 400
+
+    project = project_collection.find_one({
+        "_id": ObjectId(project_id),
+        "user_id": ObjectId(session['user_id'])
+    })
+
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    all_keys = project.get('api_keys', [])
+    texts = []
+
+    for key in all_keys:
+        docs = analysis_collection.find({"api_key": key})
+        for doc in docs:
+            if doc.get("text"):
+                texts.append(doc["text"])
+
+    if not texts:
+        return jsonify({"error": "No data to analyze"}), 400
+
+    combined_text = "\n".join(texts)[:6000]  # Limit to avoid token overload
+
+    # Prompt for overall project vibe
+    prompt = f"""
+    Analyze the overall sentiment and emotional tone of the following project data.
+
+    Texts:
+    {combined_text}
+
+    Respond ONLY in JSON with:
+    {{
+        "overall_emotion": "...",
+        "overall_polarity": "...",
+        "summary": "(1-2 sentence summary of the mood)"
+    }}
+    """
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+            "Content-Type": "application/json"
+        }
+        groq_payload = {
+            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+            "messages": [
+                {"role": "system", "content": "You are a sentiment analysis expert."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.5
+        }
+
+        groq_response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=groq_payload,
+            timeout=25
+        )
+
+        raw_response = groq_response.json()["choices"][0]["message"]["content"]
+        json_match = re.search(r'{.*}', raw_response, re.DOTALL)
+        if not json_match:
+            return jsonify({"error": "Invalid format from model"}), 500
+
+        result = json.loads(json_match.group())
+        return jsonify(result)
+
+    except Exception as e:
+        print("❌ Error in /project_analysis:")
+        traceback.print_exc()
+        return jsonify({"error": "Something went wrong"}), 500
 
 @app.route('/docs')
 def docs():

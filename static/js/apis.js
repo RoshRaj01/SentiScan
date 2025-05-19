@@ -201,3 +201,23 @@ function editProjectName(projectId) {
 		alert("❌ Something went wrong.");
 	});
 }
+
+function analyzeProject(projectId) {
+    fetch("/project_analysis", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) return alert("❌ " + data.error);
+
+        alert(
+            `📊 Project Analysis:\n\n🧠 Emotion: ${data.overall_emotion}\n⚖️ Polarity: ${data.overall_polarity}\n\n📝 Summary: ${data.summary}`
+        );
+    })
+    .catch(err => {
+        console.error("Analysis error:", err);
+        alert("❌ Failed to analyze project.");
+    });
+}

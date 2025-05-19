@@ -50,6 +50,8 @@
 					  <div class="api-buttons wide-btns">
 						<button class="project-action-btn" onclick="editProjectName('{{ project._id }}')">✏️ Edit Name</button>
 						<button class="project-action-btn delete-btn" onclick="deleteProject('{{ project._id }}', this)">🗑️ Delete Project</button>
+					    <button class="project-action-btn" onclick="analyzeProject('{{ project._id }}')">📊 Analyze</button>
+
 					  </div>
 					</div>
 					{% for key in project.api_keys %}
