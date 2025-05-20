@@ -9,7 +9,15 @@ window.addEventListener('DOMContentLoaded', function () {
 });
 
 function verifyApiKey(showAlert = true) {
-	const enteredKey = document.getElementById("apiInput").value;
+	const enteredKey = document.getElementById("apiInput").value.trim();
+	if (!enteredKey) return;
+
+	const resultEl = document.getElementById("apiResult");
+	const usageEl = document.getElementById("usageWarning");
+
+	// clear old content
+	resultEl.innerText = "";
+	usageEl.innerText = "";
 
 	sessionStorage.setItem('apiKey', enteredKey);
 
@@ -21,29 +29,58 @@ function verifyApiKey(showAlert = true) {
 	.then(response => response.json())
 	.then(data => {
 		const resultEl = document.getElementById("apiResult");
-		resultEl.innerText = data.message;
+		const usageEl = document.getElementById("usageWarning");
+
+		let message = data.message;
+		resultEl.innerText = message;
 		resultEl.style.color = data.valid ? "green" : "red";
+		usageEl.innerText = "";  // clear previous warning
+		usageEl.style.color = "orange";
 
 		const analyzeBtn = document.getElementById("analyzeBtn");
+
 		if (data.valid) {
 			isApiKeyVerified = true;
+			sessionStorage.setItem('apiKey', enteredKey);
 			sessionStorage.setItem('apiVerified', 'true');
+
+			const usage = data.usage_count || 0;
+
+			const model = enteredKey.split("-")[1];
+			if (model === "r3") {
+				document.getElementById("urlLabel").style.display = "inline-flex";
+			} else {
+				document.getElementById("urlLabel").style.display = "none";
+			}
+
+					if (usage >= 15) {
+				usageEl.innerText = "⚠️ 75% usage reached";
+			} else if (usage >= 10) {
+				usageEl.innerText = "⚠️ 50% usage reached";
+			} else {
+				usageEl.innerText = "";
+			}
+
 			analyzeBtn.disabled = false;
 			analyzeBtn.style.opacity = "1";
 			analyzeBtn.style.cursor = "pointer";
 		} else {
 			isApiKeyVerified = false;
+			sessionStorage.removeItem('apiKey');
 			sessionStorage.setItem('apiVerified', 'false');
+
 			analyzeBtn.disabled = true;
 			analyzeBtn.style.opacity = "0.5";
 			analyzeBtn.style.cursor = "not-allowed";
 		}
+
 	})
 	.catch(error => {
 		console.error('Error verifying API key:', error);
 		if (showAlert) alert("Something went wrong while verifying API key.");
 	});
 }
+
 
 let uploadedFile = null;
 let currentModel = null;
@@ -105,6 +142,9 @@ function analyzeText() {
 	if (uploadedFile) {
 		formData.append("file", uploadedFile);
 	}
+	if (currentUrl) {
+		formData.append("url", currentUrl);
+	}
 
 	fetch('/analyze', {
 		method: 'POST',
@@ -124,6 +164,17 @@ function analyzeText() {
 			if (data) {
 				document.getElementById("emotionResult").innerText = data.predicted_emotion;
 				document.getElementById("polarityResult").innerText = data.predicted_polarity;
+
+				const usageEl = document.getElementById("usageWarning");
+				if (data.usage_count >= 15) {
+					usageEl.innerText = "⚠️ 75% usage reached";
+					usageEl.style.color = "orange";
+				} else if (data.usage_count >= 10) {
+					usageEl.innerText = "⚠️ 50% usage reached";
+					usageEl.style.color = "orange";
+				} else {
+					usageEl.innerText = "";
+				}
 			}
 		})
 		.catch(error => {
@@ -133,6 +184,7 @@ function analyzeText() {
 		.finally(() => {
 			spinner.style.display = "none";
 			analyzeBtn.disabled = false;
+			currentUrl = "";
 		});
 }
 
@@ -176,4 +228,29 @@ function handleUsageRedirect() {
 	} else {
 		window.location.href = '/apis';
 	}
+}
+
+let currentUrl = "";
+
+function showUrlPopup() {
+	document.getElementById("urlModal").style.display = "block";
+}
+
+function closeUrlPopup() {
+	document.getElementById("urlModal").style.display = "none";
+	document.getElementById("urlInputField").value = "";
+}
+
+function submitUrl() {
+	const urlField = document.getElementById("urlInputField");
+	const enteredUrl = urlField.value.trim();
+
+	if (!enteredUrl.startsWith("http")) {
+		alert("❌ Please enter a valid URL.");
+		return;
+	}
+
+	document.getElementById("userInput").value = `🔗 Analyzing: ${enteredUrl}`;
+	currentUrl = enteredUrl;
+	closeUrlPopup();
 }

@@ -30,11 +30,9 @@ api_usage_collection = db['api_usage']
 project_collection = db['projects']
 
 
-# === HELPER FUNCTIONS ===
 def get_today():
     return date.today().isoformat()
 
-# === ROUTES ===
 @app.route('/')
 def index():
     return redirect(url_for('login'))
@@ -199,10 +197,15 @@ def verify_api_key():
 
     if user and entered_key in user.get('api_keys', []):
         model_type = entered_key.split('-')[1]
+        today = date.today().isoformat()
+        usage_doc = api_usage_collection.find_one({'api_key': entered_key, 'date': today})
+        usage_count = usage_doc['count'] if usage_doc else 0
+
         return jsonify({
             "valid": True,
             "message": "✅ API key is valid!",
-            "model": model_type
+            "model": model_type,
+            "usage_count": usage_count
         })
     else:
         return jsonify({"valid": False, "message": "❌ Invalid API key."})
@@ -439,7 +442,8 @@ def analyze_text():
 
         return jsonify({
             "predicted_emotion": result.get("emotion_analysis"),
-            "predicted_polarity": result.get("sentiment_label")
+            "predicted_polarity": result.get("sentiment_label"),
+            "usage_count": usage['count'] + 1 if usage else 1
         })
 
     except Exception as e:

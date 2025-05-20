@@ -46,22 +46,79 @@
 					<h2>🔐 Authentication</h2>
 					<p>Each user has to create an <code>api_key</code> to use SentiScan. The <code>api_key</code> can be created under the APIs tab. This key must be sent in requests to access the API securely.</p>
 					<p>Example usage:</p>
-					<pre><code>{ "api_key": "your-api-key-here",</code>
-					<code>"text": "I'm happy today!" }</code></pre>
+					<pre><code>{ "api_key": "your-api-key-here", "text": "I'm happy today!" }</code></pre>
 				</div>
 
 				<div class="docs-section" id="usage">
 					<h2>🧠 API Usage</h2>
-					<p>Send a <code>POST</code> request to <code>/analyze</code> with your API key and input text.</p>
-					<p>The response will contain sentiment scores, keywords, emotion label, and more.</p>
+					<p>Send a <code>POST</code> request to <code>/analyze</code> with your API key and input text or file.</p>
+					<p>You can also attach an optional file or URL (R3 only) for analysis. The response includes:</p>
+					<ul>
+						<li>🧾 Original content</li>
+						<li>💡 Sentiment score & label</li>
+						<li>🎯 Keywords extracted</li>
+						<li>🎭 Emotion classification</li>
+						<li>📈 Confidence score</li>
+					</ul>
+				</div>
+
+				<div class="docs-section" id="models">
+					<h2>🤖 Model Capabilities</h2>
+					<div style="display: flex; justify-content: space-between; gap: 20px;">
+						<div style="flex: 1;">
+							<h4 style="color: #555;text-decoration:underline">R1</h4>
+							<ul style="list-style-type: none; padding-left: 0;">
+								<li>• Supports only <code>.txt</code></li>
+								<li>• Basic sentiment & emotion</li>
+								<li>• Fastest processing</li>
+								<li>• Minimal output fields</li>
+							</ul>
+						</div>
+						<div style="flex: 1;">
+							<h4 style="color: #555;text-decoration:underline">R2</h4>
+							<ul style="list-style-type: none; padding-left: 0;">
+								<li>• Supports <code>.txt</code> and <code>.pdf</code></li>
+								<li>• Improved keyword extraction</li>
+								<li>• Better emotion mapping</li>
+								<li>• Better than R1</li>
+							</ul>
+						</div>
+						<div style="flex: 1;">
+							<h4 style="color: #555;text-decoration:underline">R3</h4>
+							<ul style="list-style-type: none; padding-left: 0;">
+								<li>• Supports <code>.txt</code>, <code>.pdf</code>, <code>.docx</code></li>
+								<li>• Allows URL scraping</li>
+								<li>• Advanced contextual detection</li>
+								<li>• Returns emotion intensity (1–10)</li>
+							</ul>
+						</div>
+					</div>
 				</div>
 
 				<div class="docs-section" id="limits">
 					<h2>📊 Usage Limits</h2>
 					<p>Each user has a free tier limit of <code>20</code> analyses per day.</p>
+					<p>⚠️ Usage warnings are shown at:</p>
+					<ul>
+						<li>🔸 50% usage → “50% usage reached”</li>
+						<li>🔶 75% usage → “75% usage reached”</li>
+						<li>❌ 100% usage → analysis blocked until next day</li>
+					</ul>
+				</div>
+
+				<div class="docs-section" id="project">
+					<h2>📂 Project-Level Analysis</h2>
+					<p>You can analyze an entire project to get the overall emotional tone and polarity by aggregating all the content submitted using that project’s API keys.</p>
+					<p>Response includes:</p>
+					<ul>
+						<li>• 🧠 Overall dominant emotion</li>
+						<li>• ⚖️ Overall polarity (Positive/Neutral/Negative)</li>
+						<li>• 📝 Summary description of the tone</li>
+					</ul>
 				</div>
 
 			</div>
+
 		</div>
 	</div>
 
