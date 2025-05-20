@@ -42,12 +42,38 @@ def is_password_strong(password):
     pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$'
     return bool(re.match(pattern, password))
 
-def send_confirmation_email(to_email):
+def send_confirmation_email(to_email,name):
     sender_email = "sentiscan.info@gmail.com"
     sender_password = "sock xjke agqo bugj"
 
     subject = "Welcome to SentiScan 🎉"
-    body = "Hey there!\n\nYou’ve successfully created an account in *SentiScan*.\nLet’s start analysing!"
+    body = f"""
+    Hey there, {name}!
+
+    Welcome to **SentiScan** — we're hyped to have you on board!
+
+    You've successfully created your account, and you're now ready to dive into the world of emotion and sentiment analysis.
+
+    Here’s what you can do on SentiScan:
+
+    Generate API keys for any of our 3 intelligent models:  
+    - **R1 (Basic)** – Supports `.txt` files, perfect for simple emotion/polarity detection  
+    - **R2 (Enhanced)** – Supports `.txt` and `.pdf`, with better keyword detection and improved accuracy  
+    - **R3 (Pro)** – Supports `.txt`, `.pdf`, `.docx`, and even **URL input** for web page scraping. Also includes emotion *intensity scoring* (e.g., how angry/sad/happy).
+
+    Key Features:
+    - Analyze custom text, documents, and URLs with ease
+    - Organize keys into projects for grouped analysis
+    - Visual dashboards showing emotion distribution, polarity breakdowns, top keywords, and more
+    - Usage tracking with graphs for better understanding
+
+    Ready to analyze?
+    Head over to your dashboard, verify your API key, and start scanning your content. Need help? You can always check out our documentation for detailed steps.
+
+    Thanks again for joining us!
+
+    — Team SentiScan 💚
+    """
 
     try:
         msg = MIMEMultipart()
@@ -69,6 +95,7 @@ def send_confirmation_email(to_email):
         return False
 
     return True
+
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     if request.method == "POST":
@@ -101,7 +128,7 @@ def register():
             "api_keys": []
         })
 
-        send_confirmation_email(email)
+        send_confirmation_email(email,name)
 
         flash("Account Created Successfully!", "success")
         return redirect(url_for('login'))
@@ -131,7 +158,6 @@ def login():
         return redirect(url_for('login'))
 
     return render_template("login.html")
-
 
 @app.route('/logout')
 def logout():
